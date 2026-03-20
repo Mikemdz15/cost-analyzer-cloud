@@ -526,7 +526,7 @@ const reactAppReplacement = `
                }
 
                // WE PRELOAD THE HISTORY SO THE SYNCHRONOUS APP DOESN'T BREAK!
-             let preloadedHistory = [];
+             let preloadedHistory = window._globalPreloadedHistory || [];
              
              // Replace load function
              HistoryManager.load = () => {
@@ -570,6 +570,8 @@ const reactAppReplacement = `
                      const monthRuns = allRuns.filter(r => r.history_id === row.id).map(r => r.run_data);
                      return {
                          id: row.id,
+                         created_at: row.created_at,
+                         timestamp: row.created_at,
                          year: row.year,
                          monthIndex: row.month_index,
                          monthName: new Date(row.year, row.month_index - 1, 1).toLocaleString('es-MX', { month: 'long' }),
@@ -581,6 +583,8 @@ const reactAppReplacement = `
                          comments: row.summary_jsonb.comments || {}
                      };
                  });
+             };
+                 window._globalPreloadedHistory = preloadedHistory;
              };
 
              HistoryManager.saveMonth = async (data) => {
