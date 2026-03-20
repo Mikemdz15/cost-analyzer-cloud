@@ -525,13 +525,13 @@ const reactAppReplacement = `
                    observerAdmin.observe(document.body, { childList: true, subtree: true });
                }
 
-               // WE PRELOAD THE HISTORY SO THE SYNCHRONOUS APP DOESN'T BREAK!
-             let preloadedHistory = window._globalPreloadedHistory || [];
-             
-             // Replace load function
-             HistoryManager.load = () => {
-                 return preloadedHistory;
-             };
+                // WE PRELOAD THE HISTORY SO THE SYNCHRONOUS APP DOESN'T BREAK!
+              let preloadedHistory = window._globalPreloadedHistory || [];
+              
+              // Replace load function
+              HistoryManager.load = () => {
+                  return preloadedHistory;
+              };
              
              // This function must be called on mount to fetch data from Supabase DB
              window.loadHistoryFromCloud = async () => {
@@ -583,7 +583,6 @@ const reactAppReplacement = `
                          comments: row.summary_jsonb.comments || {}
                      };
                  });
-             };
                  window._globalPreloadedHistory = preloadedHistory;
              };
 
