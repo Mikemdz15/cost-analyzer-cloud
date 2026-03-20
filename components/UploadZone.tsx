@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useState } from 'react'
 import * as XLSX from 'xlsx'
 import { useRouter } from 'next/navigation'
@@ -45,8 +45,8 @@ export function UploadZone({ companyName }: { companyName: string }) {
         throw new Error("El mes seleccionado no coincide con el mes de los datos del Excel.");
       }
 
-      const processedRuns = [];
-      let totalStdCost = 0; let totalRealCost = 0;
+      const processedRuns: any[] = [];
+      const virtualBOM: any = {};
 
       for (let i = 1; i < jsonData.length; i++) {
         const row = jsonData[i];
@@ -57,8 +57,10 @@ export function UploadZone({ companyName }: { companyName: string }) {
         const stdQtyTotal = cleanCurrency(row[13]);
         const producedUnits = cleanCurrency(row[5]);
 
+        const runId = `${row[2]}-${row[1]}`;
+
         const runItem = {
-          id: `${row[2]}-${row[1]}`,
+          id: runId,
           originalOrderId: row[2].toString(),
           date: `Mes ${selectedMonth} - Sem ${row[1]}`,
           weekId: `Semana ${row[1]}`,
@@ -76,17 +78,104 @@ export function UploadZone({ companyName }: { companyName: string }) {
           variance: (stdQtyTotal - realQty) * unitCost
         };
 
-        totalStdCost += runItem.stdCost;
-        totalRealCost += runItem.realCost;
         processedRuns.push(runItem);
+
+        if (!virtualBOM[runItem.sku]) virtualBOM[runItem.sku] = {};
+        if (!virtualBOM[runItem.sku][runItem.component]) {
+            virtualBOM[runItem.sku][runItem.component] = {
+                stdQty: producedUnits > 0 ? (stdQtyTotal / producedUnits) : 0,
+                cost: unitCost,
+                type: 'Raw Material'
+            };
+        }
       }
+
+      // 3. AGGREGATE SUMMARY (By Component & By SKU)
+      let totalStdCost = 0;
+      let totalRealCost = 0;
+      const varianceByComponent: any = {};
+      const skuAggregates: any = {};
+
+      const maxUnitsByRun: any = {};
+      processedRuns.forEach(r => {
+          if (!maxUnitsByRun[r.id] || r.units > maxUnitsByRun[r.id]) {
+              maxUnitsByRun[r.id] = r.units;
+          }
+      });
+
+      processedRuns.forEach(run => {
+          totalStdCost += run.stdCost;
+          totalRealCost += run.realCost;
+
+          // Component Aggregate
+          if (!varianceByComponent[run.component]) {
+              varianceByComponent[run.component] = {
+                  name: run.componentName || run.component,
+                  description: run.component,
+                  totalVariance: 0,
+                  totalReal: 0,
+                  totalStd: 0
+              };
+          }
+          varianceByComponent[run.component].totalVariance += run.variance;
+          varianceByComponent[run.component].totalReal += run.realCost;
+          varianceByComponent[run.component].totalStd += run.stdCost;
+
+          // SKU Aggregate
+          if (!skuAggregates[run.sku]) {
+              skuAggregates[run.sku] = {
+                  sku: run.sku,
+                  description: run.skuDesc || run.sku,
+                  status: 'CERRADA',
+                  netsuite: 'CERRADA',
+                  totalUnits: 0,
+                  totalPlanned: 0,
+                  processedOrders: new Set(),
+                  totalReal: 0,
+                  totalStd: 0,
+                  totalVar: 0
+              };
+          }
+
+          if (!skuAggregates[run.sku].processedOrders.has(run.id)) {
+              const validUnits = maxUnitsByRun[run.id] || 0;
+              skuAggregates[run.sku].totalUnits += validUnits;
+              skuAggregates[run.sku].totalPlanned += (run.plannedUnits || validUnits);
+              skuAggregates[run.sku].processedOrders.add(run.id);
+          }
+
+          skuAggregates[run.sku].totalReal += run.realCost;
+          skuAggregates[run.sku].totalStd += run.stdCost;
+          skuAggregates[run.sku].totalVar += run.variance;
+      });
+
+      // Format SKU Details for Output
+      const skuDetails = Object.values(skuAggregates).map((item: any) => {
+          const efficiencyProd = item.totalPlanned > 0 ? (item.totalUnits / item.totalPlanned) : 0;
+          return {
+              sku: item.sku,
+              description: item.description,
+              status: item.status,
+              netsuite: item.netsuite,
+              totalPlanned: item.totalPlanned,
+              totalUnits: item.totalUnits,
+              totalReal: item.totalReal,
+              totalStd: item.totalStd,
+              totalVar: item.totalVar,
+              efficiencyProd: efficiencyProd,
+              mermaPct: item.totalStd > 0 ? (item.totalVar / item.totalStd) * 100 : 0
+          };
+      });
 
       const summary = {
         totalStdCost,
         totalRealCost,
         variance: totalStdCost - totalRealCost,
-        efficiency: totalRealCost > 0 ? (totalStdCost / totalRealCost) : 0
-      }
+        efficiency: totalRealCost > 0 ? (totalStdCost / totalRealCost) : 0,
+        skuDetails: skuDetails.sort((a: any, b: any) => a.totalVar - b.totalVar),
+        details: Object.values(varianceByComponent).sort((a: any, b: any) => a.totalVariance - b.totalVariance),
+        boms: virtualBOM
+      };
 
       alert('Excel analizado. Enviando ' + processedRuns.length + ' filas a Supabase...');
 

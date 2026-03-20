@@ -9,15 +9,21 @@ import { AnnualSkuTable } from './AnnualSkuTable'
 const formatCurrency = (val: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
 
 export function DashboardView({ companyName, histories }: { companyName: string, histories: any[] }) {
-  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(histories[0]?.id || null)
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(
+    histories.length > 0 ? histories[histories.length - 1].id : null
+  );
 
   const currentHistory = useMemo(() => histories.find(h => h.id === selectedHistoryId), [selectedHistoryId, histories]);
   const prevHistory = useMemo(() => {
      if (!currentHistory) return null;
-     const targetMonth = currentHistory.month_index - 1;
-     const targetYear = targetMonth === 0 ? currentHistory.year - 1 : currentHistory.year;
+     const currentMonthIdx = Number(currentHistory.month_index);
+     const currentYearNum = Number(currentHistory.year);
+     
+     const targetMonth = currentMonthIdx - 1;
+     const targetYear = targetMonth === 0 ? currentYearNum - 1 : currentYearNum;
      const m = targetMonth === 0 ? 12 : targetMonth;
-     return histories.find(h => h.month_index === m && h.year === targetYear);
+     
+     return histories.find(h => Number(h.month_index) === m && Number(h.year) === targetYear);
   }, [currentHistory, histories]);
 
   if (!histories.length) {
