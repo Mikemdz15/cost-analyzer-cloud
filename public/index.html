@@ -2706,6 +2706,7 @@
                 if (hYear === dYear - 1) return hMonth === 12 && dMonth === 1;
                 return false;
             });
+            console.log("DEBUG Dashboard - history map:", history.map(h => h.monthIndex + '-' + h.year));
             console.log("DEBUG Dashboard - prevMonth Found:", !!prevMonth, "dMonth:", Number(data.monthIndex), "hMonth (if any):", prevMonth ? prevMonth.monthIndex : 'N/A');
 
             return (
