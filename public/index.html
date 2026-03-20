@@ -2698,13 +2698,15 @@
 
             // Determine previous month for the Unit Cost Table
             const prevMonth = history.find(h => {
-                const hYear = h.year || 2024;
-                const dYear = data.year || 2024;
-                if (hYear === dYear) return h.monthIndex === (data.monthIndex - 1);
-                // Handle year rollover if needed (not active yet but future proof)
-                if (hYear === dYear - 1) return h.monthIndex === 12 && data.monthIndex === 1;
+                const hYear = Number(h.year) || 2024;
+                const dYear = Number(data.year) || 2024;
+                const hMonth = Number(h.monthIndex);
+                const dMonth = Number(data.monthIndex);
+                if (hYear === dYear) return hMonth === (dMonth - 1);
+                if (hYear === dYear - 1) return hMonth === 12 && dMonth === 1;
                 return false;
             });
+            console.log("DEBUG Dashboard - prevMonth Found:", !!prevMonth, "dMonth:", Number(data.monthIndex), "hMonth (if any):", prevMonth ? prevMonth.monthIndex : 'N/A');
 
             return (
                 <div className="space-y-8 animate-fade-in pb-20">
