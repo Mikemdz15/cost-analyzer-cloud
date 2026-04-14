@@ -2354,11 +2354,10 @@
                                 const variancePct = totalStdCost > 0 ? (varianceVal / totalStdCost) * 100 : 0;
                                 const totalProduced = record.skuDetails ? record.skuDetails.reduce((a, b) => a + (b.totalUnits || 0), 0) : 0;
 
-                                const prevMonth = idx > 0 ? history[idx - 1] : null;
-                                // Caution: history is sorted asc by monthIndex. index-1 is previous month *in the list*.
-                                // If months are contiguous (11, 12), fine. If (1, 12), logical check needed? 
-                                // Assuming user uploads in order or sorts by monthIndex. `HistoryManager` sorts by monthIndex.
-                                // So idx-1 is the closest earlier month available.
+                                const prevMonth = history.find(h => {
+                                    if (record.monthIndex === 1) return h.year === (record.year - 1) && h.monthIndex === 12;
+                                    return h.year === record.year && h.monthIndex === (record.monthIndex - 1);
+                                });
 
                                 const sortedSkus = getSortedData(record.skuDetails || []);
 
