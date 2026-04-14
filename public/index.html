@@ -2355,8 +2355,13 @@
                                 const totalProduced = record.skuDetails ? record.skuDetails.reduce((a, b) => a + (b.totalUnits || 0), 0) : 0;
 
                                 const prevMonth = history.find(h => {
-                                    if (record.monthIndex === 1) return h.year === (record.year - 1) && h.monthIndex === 12;
-                                    return h.year === record.year && h.monthIndex === (record.monthIndex - 1);
+                                    const rMonth = Number(record.monthIndex);
+                                    const rYear = Number(record.year || 2024);
+                                    const hMonth = Number(h.monthIndex);
+                                    const hYear = Number(h.year || 2024);
+                                    
+                                    if (rMonth === 1) return hYear === (rYear - 1) && hMonth === 12;
+                                    return hYear === rYear && hMonth === (rMonth - 1);
                                 });
 
                                 const sortedSkus = getSortedData(record.skuDetails || []);
