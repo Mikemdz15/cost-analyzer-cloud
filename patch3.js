@@ -1,15 +1,10 @@
 const fs = require('fs');
-let code = fs.readFileSync('inject-supabase-html.js', 'utf8');
+let fileStr = fs.readFileSync('inject-supabase-html.js', 'utf8');
 
-// The issue is that `HistoryManager.load = () => { return preloadedHistory; }`
-// returns the SAME array reference. When `OriginalApp` does `setHistory(HistoryManager.load())`,
-// React bails out of rendering because `oldHistory === newHistory`.
-// We need to mutate the `preloadedHistory` reference when `updateMonth` is called.
+fileStr = fileStr.replace(
+    /return \{\s*id: row\.id,\s*year: row\.year,/g,
+    "return {\n                         id: row.id,\n                         created_at: row.created_at,\n                         timestamp: row.created_at,\n                         year: row.year,"
+);
 
-const updateMonthRegex = /const result = window\.originalUpdateMonth\(monthIndex, year, updates\);/g;
-if (code.match(updateMonthRegex)) {
-    code = code.replace(updateMonthRegex, `const result = window.originalUpdateMonth(monthIndex, year, updates);\n                       preloadedHistory = [...preloadedHistory];`);
-}
-
-fs.writeFileSync('inject-supabase-html.js', code);
-console.log('Patch 3 (React Array Reference Bypass) applied successfully!');
+fs.writeFileSync('inject-supabase-html.js', fileStr);
+console.log(fileStr.includes('created_at: row.created_at') ? "Patch Success" : "Patch Failed");
